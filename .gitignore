@@ -1,0 +1,22 @@
+# OAuth credentials (NEVER commit these)
+client_secrets.json
+
+# Auth tokens (contains access/refresh tokens for your accounts)
+tokens/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
