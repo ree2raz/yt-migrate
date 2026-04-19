@@ -22,8 +22,8 @@ Migrate your YouTube **subscriptions**, **playlists**, and **Watch Later** from 
 ## Quick start
 
 ```bash
-git clone https://github.com/ree2raz/yt-migrate.git
-cd yt-migrate
+git clone https://github.com/ree2raz/migrate-my-youtube.git
+cd migrate-my-youtube
 python3 -m venv .venv
 source .venv/bin/activate
 pip install google-api-python-client google-auth-oauthlib google-auth-httplib2
