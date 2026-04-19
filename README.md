@@ -1,56 +1,54 @@
 # YouTube Migration Tool
 
-Migrate your YouTube **subscriptions** and **playlists** from one account to another using the YouTube Data API v3.
+Migrate your YouTube **subscriptions**, **playlists**, and **Watch Later** from one account to another using the YouTube Data API v3.
 
-Supports both YouTube accounts (personal and brand accounts).
+## What can be migrated
+
+| Data | Method | Notes |
+|---|---|---|
+| Subscriptions | YouTube Data API | Skips own channel |
+| Your playlists (created) | YouTube Data API | Creates new playlists on destination |
+| Saved/bookmarked playlists | YouTube Data API + Takeout CSV | Recreated as private playlists |
+| Watch Later | Google Takeout CSV | Migrated as a private playlist |
+| Liked videos | ❌ Not supported | API prohibits writing to Likes |
+| Watch History | ❌ Not supported | Not accessible via API |
 
 ## Prerequisites
 
 - Python 3.10+
-- A Google account
-- 5 minutes for one-time Google Cloud setup
+- A Google account with YouTube access
+- ~10 minutes for one-time Google Cloud setup
 
-## Setup
-
-### 1. Clone and install dependencies
+## Quick start
 
 ```bash
-git clone https://github.com/<your-username>/yt-migrate.git
+git clone https://github.com/ree2raz/yt-migrate.git
 cd yt-migrate
 python3 -m venv .venv
 source .venv/bin/activate
 pip install google-api-python-client google-auth-oauthlib google-auth-httplib2
 ```
 
-### 2. Create Google Cloud credentials
+## Google Cloud setup (one-time)
 
-You need an OAuth 2.0 client ID so this script can authenticate with YouTube on your behalf.
+### Step 1: Create a Google Cloud project
 
-#### 2a. Create a Google Cloud project
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Click the **project dropdown** at the top
+3. Click **New Project**, name it anything (e.g., `yt-migrate`), click **Create**
 
-1. Open [Google Cloud Console](https://console.cloud.google.com/)
-2. Click the **project dropdown** at the top of the page
-3. Click **New Project**
-4. Name it anything (e.g., `yt-migrate`)
-5. Click **Create**
-
-#### 2b. Enable the YouTube Data API
+### Step 2: Enable YouTube Data API v3
 
 1. Go to [APIs & Services > Library](https://console.cloud.google.com/apis/library)
 2. Search for **YouTube Data API v3**
-3. Click on it and press **Enable**
+3. Click on it, press **Enable**
 
-#### 2c. Set up the OAuth consent screen
+### Step 3: Configure OAuth consent screen
 
 1. Go to [APIs & Services > OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent)
-2. Select **External** and click **Create**
-3. Fill in the required fields:
-   - **App name**: `yt-migrate` (or anything you like)
-   - **User support email**: your email address
-   - **Developer contact email**: your email address
-4. Click **Save and Continue**
-5. On the **Scopes** page, click **Add or Remove Scopes**
-6. Add these three scopes (paste each one into the filter and check the box):
+2. Choose **External**, click **Create**
+3. Fill required fields (app name, your email). Click **Save and Continue**
+4. On the **Scopes** page, click **Add or Remove Scopes** and add these three:
 
    ```
    https://www.googleapis.com/auth/youtube.readonly
@@ -58,100 +56,140 @@ You need an OAuth 2.0 client ID so this script can authenticate with YouTube on 
    https://www.googleapis.com/auth/youtube
    ```
 
-7. Click **Update**, then **Save and Continue**
-8. On the **Test users** page, click **Add Users**
-9. Add **both** email addresses:
-   - The email of your **source** YouTube account (where you're migrating FROM)
-   - The email of your **destination** YouTube account (where you're migrating TO)
-   > **Important:** Without adding both emails here, authentication will fail with "Access Denied"
-10. Click **Save and Continue**, then **Back to Dashboard**
+5. Click **Update** → **Save and Continue**
+6. On the **Test users** page, click **Add Users**
+7. Add **both** email addresses:
+   - The email of your **source** YouTube account (migrating FROM)
+   - The email of your **destination** YouTube account (migrating TO)
+8. Click **Save and Continue** → **Back to Dashboard**
 
-#### 2d. Create the OAuth client ID
+> **Important:** Without adding both emails as Test Users, authentication will fail with "Access Denied".
+
+### Step 4: Create OAuth 2.0 client ID
 
 1. Go to [APIs & Services > Credentials](https://console.cloud.google.com/apis/credentials)
 2. Click **Create Credentials** → **OAuth client ID**
 3. **Application type**: select **Desktop app**
 4. **Name**: `yt-migrate`
 5. Click **Create**
-6. A dialog shows "OAuth client created" — click **Download JSON**
+6. Click **Download JSON**
 7. Rename the downloaded file to `client_secrets.json`
-8. Place it in the root of this project directory:
+8. Place it in the root of this project:
 
    ```
    yt-migrate/
    ├── client_secrets.json   <-- put it here
    ├── migrate.py
-   └── ...
+   ├── migrate_playlists.py
+   └── migrate_watchlater.py
    ```
 
-> **Troubleshooting:** If you see "Google hasn't verified this app" during login, click **Advanced** → **Go to yt-migrate (unsafe)**. This is normal — you're using your own app, not a public one.
+> If you see "Google hasn't verified this app" during login, click **Advanced** → **Go to yt-migrate (unsafe)**. This is expected — you're running your own app.
 
-### 3. Edit channel IDs
+## Configure your channel IDs
 
-Open `migrate.py` and update these two lines with your channel IDs:
+Edit these files and replace the placeholder channel IDs with yours:
 
+**migrate.py** (subscriptions + owned playlists):
 ```python
-SOURCE_CHANNEL_ID = "UC_SOURCE_CHANNEL_ID_HERE"       # account you're migrating FROM
-DEST_CHANNEL_ID   = "UC_DEST_CHANNEL_ID_HERE"         # account you're migrating TO
+SOURCE_CHANNEL_ID = "UC_YOUR_SOURCE_CHANNEL_ID"
+DEST_CHANNEL_ID   = "UC_YOUR_DEST_CHANNEL_ID"
 ```
 
-To find your channel ID:
-1. Go to [YouTube Studio](https://studio.youtube.com/) while logged into that account
-2. Click **Settings** → **Channel** → **Basic info**
-3. Your channel ID starts with `UC`
+**migrate_playlists.py** (saved/bookmarked playlists):
+```python
+DEST_CHANNEL_ID = "UC_YOUR_DEST_CHANNEL_ID"
+
+SAVED_PLAYLISTS = [
+    ("PL_PLAYLIST_ID_1", "Display name for playlist 1"),
+    ("PL_PLAYLIST_ID_2", "Display name for playlist 2"),
+]
+```
+
+**migrate_watchlater.py** (Watch Later):
+```python
+DEST_CHANNEL_ID = "UC_YOUR_DEST_CHANNEL_ID"
+```
+
+To find your channel ID: [YouTube Studio](https://studio.youtube.com/) → Settings → Channel → Basic info.
 
 ## Usage
 
-### Dry run (no changes made)
+### Migrate subscriptions and owned playlists
 
 ```bash
 source .venv/bin/activate
-python migrate.py --dry-run
+python migrate.py --dry-run   # preview first
+python migrate.py             # run for real
 ```
 
-This authenticates your source account, fetches all subscriptions and playlists, and shows what would be migrated. No writes are made.
+Options: `--subscriptions-only`, `--playlists-only`, `--clear-tokens`, `-y` (skip confirmation).
 
-### Full migration
+### Migrate saved/bookmarked playlists
 
+These are playlists you've bookmarked/saved from other channels (not ones you created).
+
+**Step 1:** Collect playlist IDs. Open YouTube, go to each saved playlist, and copy the ID from the URL:
+```
+https://www.youtube.com/playlist?list=PLXXXXXXXXXXXXXXXXXX
+                                       ^^^^^^^^^^^^^^^^^^^^ this part
+```
+
+**Step 2:** Add them to `migrate_playlists.py` in the `SAVED_PLAYLISTS` list:
+```python
+SAVED_PLAYLISTS = [
+    ("PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ", "3Blue1Brown - Linear Algebra"),
+    ("PLoROMvodv4rOCXd21gf0CF4xr35yINeOy", "Stanford CS224N"),
+]
+```
+
+**Step 3:** Run:
 ```bash
-python migrate.py
+python migrate_playlists.py
 ```
 
-The script will:
-1. Ask you to authenticate your **source** account in the browser
-2. Fetch all subscriptions and playlists
-3. Ask you to authenticate your **destination** account in the browser
-4. Confirm before making any changes
-5. Migrate everything
+### Migrate Watch Later
 
-### Options
+The YouTube API cannot read Watch Later. Use Google Takeout instead.
 
+**Step 1:** Export from Google Takeout:
+1. Go to [takeout.google.com](https://takeout.google.com)
+2. Deselect all, then select only **YouTube and YouTube Music**
+3. Click **All YouTube data included** → deselect everything except **playlists**
+4. Export and download
+
+**Step 2:** Place the Takeout zip in this directory and extract:
 ```bash
-python migrate.py --subscriptions-only    # only migrate subscriptions
-python migrate.py --playlists-only        # only migrate playlists
-python migrate.py -y                      # skip confirmation prompt
-python migrate.py --clear-tokens          # force re-authentication for both accounts
-python migrate.py --dry-run               # preview without making changes
+# The script expects this structure:
+# takeout_extracted/Takeout/YouTube and YouTube Music/playlists/Watch later-videos.csv
+
+mkdir -p takeout_extracted
+cd takeout_extracted
+unzip ../takeout.zip "Takeout/YouTube and YouTube Music/playlists/*"
+cd ..
 ```
 
-## Authentication flow
+**Step 3:** Run:
+```bash
+python migrate_watchlater.py
+```
 
-The script opens your browser **twice**:
+## Authentication
 
-1. **First popup** → log into your **source** YouTube account
-2. **Second popup** → log into your **destination** YouTube account
+The scripts open your browser for Google OAuth. You'll authenticate **twice**:
 
-If your browser automatically logs into the wrong account:
-- Use an **incognito/private window** for the second auth
-- Or run `python migrate.py --clear-tokens` to start fresh
+1. **Source account** — log into the account you're migrating FROM
+2. **Destination account** — log into the account you're migrating TO
 
-The script verifies each authenticated account matches the expected channel ID. If you accidentally authenticate with the wrong account, it will warn you and exit.
+**If your browser auto-logs into the wrong account:** use an incognito/private window for the second auth, or run `python migrate.py --clear-tokens` to start fresh.
+
+Each script verifies the authenticated account matches the expected channel ID before making any changes.
 
 ## Quota limits
 
-YouTube API gives you **10,000 free units per day**. Costs per operation:
+YouTube API gives **10,000 free units per day**:
 
-| Operation | Cost per call |
+| Operation | Cost |
 |---|---|
 | `subscriptions.list` | 1 unit |
 | `subscriptions.insert` | 50 units |
@@ -160,57 +198,40 @@ YouTube API gives you **10,000 free units per day**. Costs per operation:
 | `playlistItems.list` | 1 unit |
 | `playlistItems.insert` | 50 units |
 
-**Example:** 100 subscriptions + 10 playlists with 200 videos = 100×50 + 10×50 + 200×50 = **15,500 units** (~2 days)
-
-If you hit the daily quota, re-run the next day. Already-created items will be skipped automatically.
-
-## What gets migrated
-
-| Data | Migrated? | Notes |
-|---|---|---|
-| Subscriptions | ✅ Yes | All channel subscriptions |
-| Playlists | ✅ Yes | Your playlists, recreated on destination |
-| Playlist videos | ✅ Yes | All videos added to new playlists |
-| Liked videos | ❌ No | API does not allow writing to Likes |
-| Watch Later | ❌ No | System-managed playlist |
-| Watch History | ❌ No | Not accessible via API |
-| History / Home feed | ❌ No | Not accessible via API |
-
-## Troubleshooting
-
-**"Access Denied" during OAuth:**
-→ You didn't add your email as a Test User. Go to [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent), add both account emails under Test Users.
-
-**"Google hasn't verified this app":**
-→ Click **Advanced** → **Go to yt-migrate (unsafe)**. This is expected — you're running your own app.
-
-**"quotaExceeded" error:**
-→ Daily API limit reached. Wait until midnight Pacific Time, re-run the script.
-
-**"subscriptionForbidden" error:**
-→ You're trying to subscribe to your own channel. The script skips this automatically.
-
-**Browser logs into wrong account during auth:**
-→ Use an incognito/private browser window, or log out of Google first, or run `python migrate.py --clear-tokens`.
-
-**Token errors or stale sessions:**
-→ Run `python migrate.py --clear-tokens` to delete cached auth tokens and re-authenticate from scratch.
+If you hit the daily quota, re-run the next day. Already-created items will be skipped.
 
 ## File structure
 
 ```
 yt-migrate/
-├── migrate.py              # Main script
+├── migrate.py              # Subscriptions + owned playlists
+├── migrate_playlists.py    # Saved/bookmarked playlists
+├── migrate_watchlater.py   # Watch Later (from Takeout CSV)
 ├── client_secrets.json     # Your OAuth credentials (you create this)
+├── takeout_extracted/      # Unzipped Google Takeout data
 ├── tokens/                 # Auto-created, stores auth tokens
-│   ├── source_token.pkl
-│   └── dest_token.pkl
-├── .venv/                  # Python virtual environment
 ├── .gitignore
 └── README.md
 ```
 
-`client_secrets.json` and `tokens/` are in `.gitignore` and will never be committed.
+`client_secrets.json`, `tokens/`, and `takeout_extracted/` are gitignored and will never be committed.
+
+## Troubleshooting
+
+**"Access Denied" during OAuth:**
+→ Add both accounts as Test Users in the [OAuth consent screen](https://console.cloud.google.com/apis/credentials/consent).
+
+**"Google hasn't verified this app":**
+→ Click **Advanced** → **Go to yt-migrate (unsafe)**. Normal for personal apps.
+
+**"quotaExceeded" error:**
+→ Wait until midnight Pacific Time, re-run.
+
+**Wrong account authenticated:**
+→ Use incognito/private window, or `python migrate.py --clear-tokens`.
+
+**Watch Later shows 0 videos:**
+→ The API cannot read Watch Later. Use the Takeout CSV method instead.
 
 ## License
 

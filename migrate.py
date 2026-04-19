@@ -49,6 +49,7 @@ SCOPES = [
 ]
 
 # Source and destination channel IDs
+# To find your channel ID: YouTube Studio → Settings → Channel → Basic info
 SOURCE_CHANNEL_ID = "UC_SOURCE_CHANNEL_ID_HERE"
 DEST_CHANNEL_ID = "UC_DEST_CHANNEL_ID_HERE"
 
@@ -544,8 +545,8 @@ def main():
     print("=" * 60)
     print("  YouTube Migration Tool")
     print("=" * 60)
-    print(f"  Source:      {SOURCE_CHANNEL_ID} (bytebyte1001@gmail.com)")
-    print(f"  Destination: {DEST_CHANNEL_ID} (rituraj171926@gmail.com)")
+    print(f"  Source:      {SOURCE_CHANNEL_ID}")
+    print(f"  Destination: {DEST_CHANNEL_ID}")
     print(f"  Timestamp:   {datetime.now().isoformat()}")
     
     # Clear tokens if requested
@@ -565,7 +566,7 @@ def main():
     
     # Step 1: Authenticate source account (read access)
     print("\n── Step 1: Authenticate SOURCE account ──")
-    print(f"  Log into: bytebyte1001@gmail.com")
+    print(f"  Log into your SOURCE YouTube account")
     print(f"  Expected channel ID: {SOURCE_CHANNEL_ID}")
     source_creds = get_credentials("source", expected_channel_id=SOURCE_CHANNEL_ID)
     source_youtube = build_youtube_client(source_creds)
@@ -589,7 +590,7 @@ def main():
     
     # Step 3: Authenticate destination account (write access)
     print("\n── Step 2: Authenticate DESTINATION account ──")
-    print(f"  Log into: rituraj171926@gmail.com")
+    print(f"  Log into your DESTINATION YouTube account")
     print(f"  Expected channel ID: {DEST_CHANNEL_ID}")
     print(f"  ⚠ Make sure you are logged into the CORRECT Google account in your browser!")
     print(f"  ⚠ If stuck on the wrong account, use an incognito/private window.")

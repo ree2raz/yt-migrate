@@ -4,6 +4,10 @@ client_secrets.json
 # Auth tokens (contains access/refresh tokens for your accounts)
 tokens/
 
+# Google Takeout data (may contain personal info)
+takeout_extracted/
+takeout.zip
+
 # Python
 .venv/
 __pycache__/
@@ -20,3 +24,4 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+channel.txt
